@@ -50,3 +50,5 @@ The Astronomer CLI is maintained with love by the Astronomer team. To report a b
 ## rm -r ./dbt_sales_data_processing
 cp -r ../dbt_sales_data_processing ./
 ## astro dev start
+
+astro dev start --no-cache
