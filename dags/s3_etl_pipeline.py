@@ -2,6 +2,8 @@ from airflow import DAG
 from datetime import datetime
 from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
 from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
+from airflow.operators.bash import BashOperator
+from airflow.operators.dummy import DummyOperator
 
 with DAG(
     dag_id="s3_etl_pipeline",
@@ -11,7 +13,7 @@ with DAG(
 ) as dag:
 
     wait_for_file = S3KeySensor(
-        task_id='wait_for_s3_file_pattern',
+        task_id='wait_for_amazon_s3_files',
         bucket_name='phil-ecommerce-bucket',
         bucket_key='new_files/new_TV_Final.csv',
         aws_conn_id='aws_s3',
@@ -29,9 +31,12 @@ with DAG(
         """,
     )
 
-    # run_dbt = BashOperator(
-    #     task_id='run_dbt_models',
-    #     bash_command='dbt run --project-dir /path/to/dbt/project --profiles-dir /path/to/profiles',
-    # )
+    process_data = BashOperator(
+        task_id="dbt_process_data",
+        bash_command="cd /usr/local/airflow && source dbt_venv/bin/activate && dbt run --project-dir /usr/local/airflow/dbt_sales_data_processing --profiles-dir ~/.dbt"
+    )
 
-    wait_for_file >> load_to_snowflake
+    start = DummyOperator(task_id='start')
+    end = DummyOperator(task_id='end')
+
+    start >> wait_for_file >> load_to_snowflake >> process_data >> end
